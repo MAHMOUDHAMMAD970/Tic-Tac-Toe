@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Fancy Tic Tac Toe</title>
+  <title>Tic Tac Toe vs AI</title>
   <style>
     body {
       margin: 0;
@@ -19,7 +19,7 @@
 
     .container {
       background: rgba(255, 255, 255, 0.1);
-      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
       backdrop-filter: blur(10px);
       border-radius: 20px;
       padding: 30px;
@@ -106,7 +106,6 @@
       justify-content: center;
       align-items: center;
       z-index: 999;
-      animation: fadeIn 0.4s ease;
     }
 
     .popup-content {
@@ -126,11 +125,6 @@
       font-size: 1.8rem;
     }
 
-    @keyframes fadeIn {
-      from { opacity: 0; }
-      to { opacity: 1; }
-    }
-
     @media (max-width: 500px) {
       .board {
         grid-template-columns: repeat(3, 80px);
@@ -141,13 +135,13 @@
 </head>
 <body>
   <div class="container">
-    <h1>Tic Tac Toe</h1>
-    <div class="status" id="status">Player X's turn</div>
+    <h1>Tic Tac Toe vs AI</h1>
+    <div class="status" id="status">Your turn (❌)</div>
     <div class="board" id="board"></div>
     <button onclick="restartGame()">Restart</button>
   </div>
 
-  <!-- 🎉 Popup -->
+  <!-- Popup -->
   <div class="popup" id="popup">
     <div class="popup-content">
       <h2 id="popup-message"></h2>
@@ -181,42 +175,94 @@
     }
 
     function handleCellClick(i) {
-      if (cells[i] || !gameActive) return;
-      cells[i] = currentPlayer;
+      if (cells[i] || !gameActive || currentPlayer !== 'X') return;
+      cells[i] = 'X';
       renderBoard();
-      if (checkWinner()) {
-        showPopup(`🎉 Player ${currentPlayer} wins!`);
+      if (checkWinner('X')) {
+        showPopup("🎉 You win!");
         gameActive = false;
-      } else if (cells.every(cell => cell)) {
+        return;
+      } else if (isDraw()) {
         showPopup("😐 It's a draw!");
         gameActive = false;
-      } else {
-        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
-        status.textContent = `Player ${currentPlayer}'s turn`;
+        return;
+      }
+      currentPlayer = 'O';
+      status.textContent = "Bot's turn (⭕)";
+      setTimeout(botMove, 600);
+    }
+
+    function botMove() {
+      if (!gameActive) return;
+
+      let move = getBestMove('O');
+      if (move !== null) {
+        cells[move] = 'O';
+        renderBoard();
+        if (checkWinner('O')) {
+          showPopup("🤖 Bot wins!");
+          gameActive = false;
+        } else if (isDraw()) {
+          showPopup("😐 It's a draw!");
+          gameActive = false;
+        } else {
+          currentPlayer = 'X';
+          status.textContent = "Your turn (❌)";
+        }
       }
     }
 
-    function checkWinner() {
-      return winCombos.some(combo => {
-        const [a, b, c] = combo;
-        return cells[a] && cells[a] === cells[b] && cells[a] === cells[c];
-      });
+    function getBestMove(player) {
+      // Try to win
+      for (let i = 0; i < 9; i++) {
+        if (!cells[i]) {
+          cells[i] = player;
+          if (checkWinner(player)) {
+            cells[i] = '';
+            return i;
+          }
+          cells[i] = '';
+        }
+      }
+      // Try to block
+      let opponent = player === 'X' ? 'O' : 'X';
+      for (let i = 0; i < 9; i++) {
+        if (!cells[i]) {
+          cells[i] = opponent;
+          if (checkWinner(opponent)) {
+            cells[i] = '';
+            return i;
+          }
+          cells[i] = '';
+        }
+      }
+      // Pick random
+      let empty = cells.map((v, i) => v === '' ? i : null).filter(v => v !== null);
+      return empty.length ? empty[Math.floor(Math.random() * empty.length)] : null;
+    }
+
+    function checkWinner(player) {
+      return winCombos.some(([a, b, c]) => 
+        cells[a] === player && cells[b] === player && cells[c] === player
+      );
+    }
+
+    function isDraw() {
+      return cells.every(cell => cell);
     }
 
     function showPopup(message) {
-      const popup = document.getElementById('popup');
-      const popupMsg = document.getElementById('popup-message');
-      popupMsg.textContent = message;
-      popup.style.display = 'flex';
+      document.getElementById('popup-message').textContent = message;
+      document.getElementById('popup').style.display = 'flex';
     }
 
     function restartGame() {
       cells = ['', '', '', '', '', '', '', '', ''];
       currentPlayer = 'X';
       gameActive = true;
-      status.textContent = `Player ${currentPlayer}'s turn`;
-      renderBoard();
       document.getElementById('popup').style.display = 'none';
+      status.textContent = "Your turn (❌)";
+      renderBoard();
     }
 
     renderBoard();
